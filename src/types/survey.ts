@@ -27,10 +27,11 @@ export interface ParticipantData {
 export interface SavedProgress {
   id: string;
   name: string;
-  date: string;
-  surveyData: SurveyData;
-  participantData: ParticipantData;
-  userId: string;
+  created_at: string;
+  survey_data: SurveyData;
+  participant_data: ParticipantData;
+  goals: SurveyData;
+  user_id: string;
 }
 
 export interface UserProfile {
@@ -41,4 +42,13 @@ export interface UserProfile {
   goals: SurveyData;
   participantData: ParticipantData;
   savedProgresses: SavedProgress[];
+}
+
+export interface UserGoals {
+  'G6-8': number;
+  'G9-11': number;
+  'G12-14': number;
+  'G15-18': number;
+  'G19+': number;
+  'STAFF': number;
 }

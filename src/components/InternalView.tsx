@@ -8,15 +8,17 @@ interface InternalViewProps {
   surveyData: SurveyData;
   setSurveyData: React.Dispatch<React.SetStateAction<SurveyData>>;
   goals: Record<keyof SurveyData, number>;
+  currentUser: any;
   onBack: () => void;
 }
 
-function InternalView({ surveyData, setSurveyData, goals, onBack }: InternalViewProps) {
+function InternalView({ surveyData, setSurveyData, goals, currentUser, onBack }: InternalViewProps) {
   const [tempData, setTempData] = useState<SurveyData>({ ...surveyData });
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   const [participantData, setParticipantData] = useState<ParticipantData>(() => {
-    const saved = localStorage.getItem('participantData');
+    const saved = localStorage.getItem(`participantData_${currentUser?.username}`);
     return saved ? JSON.parse(saved) : {
+      'G6-8': [],
       'G9-11': [],
       'G12-14': [],
       'G15-18': [],
@@ -30,17 +32,11 @@ function InternalView({ surveyData, setSurveyData, goals, onBack }: InternalView
 
   // Load participant database from localStorage
   useEffect(() => {
-    const savedDatabase = localStorage.getItem('participantDatabase');
+    const savedDatabase = localStorage.getItem(`participantDatabase_${currentUser?.username}`);
     if (savedDatabase) {
       setParticipantDatabase(JSON.parse(savedDatabase));
-    } else {
-      // Load default database
-      import('../data/participantDatabase').then(module => {
-        setParticipantDatabase(module.participantDatabase);
-        localStorage.setItem('participantDatabase', JSON.stringify(module.participantDatabase));
-      });
     }
-  }, []);
+  }, [currentUser]);
 
   const findParticipantByCode = (code: string) => {
     return participantDatabase.find(p => p.code.toLowerCase() === code.toLowerCase());
@@ -48,8 +44,10 @@ function InternalView({ surveyData, setSurveyData, goals, onBack }: InternalView
 
   // Save participant data to localStorage whenever it changes
   React.useEffect(() => {
-    localStorage.setItem('participantData', JSON.stringify(participantData));
-  }, [participantData]);
+    if (currentUser) {
+      localStorage.setItem(`participantData_${currentUser.username}`, JSON.stringify(participantData));
+    }
+  }, [participantData, currentUser]);
 
   // Sync with projection view in real-time
   React.useEffect(() => {
@@ -73,13 +71,22 @@ function InternalView({ surveyData, setSurveyData, goals, onBack }: InternalView
 
   const groupConfigs = [
     { 
+      key: 'G6-8', 
+      title: 'Grupo Etario G6-8', 
+      color: 'from-pink-400 to-pink-500',
+      bgColor: 'bg-pink-500/20',
+      borderColor: 'border-pink-500/30',
+      surveyType: 'L1 (15 minutos)',
+      description: 'Menores de 9 años'
+    },
+    { 
       key: 'G9-11', 
       title: 'Grupo Etario G9-11', 
       color: 'from-red-400 to-red-500',
       bgColor: 'bg-red-500/20',
       borderColor: 'border-red-500/30',
       surveyType: 'L2 (30 minutos)',
-      description: 'Menores de 12 años'
+      description: '9 a 11 años'
     },
     { 
       key: 'G12-14', 
@@ -148,6 +155,7 @@ function InternalView({ surveyData, setSurveyData, goals, onBack }: InternalView
 
   const resetAll = () => {
     const emptyData: SurveyData = {
+      'G6-8': 0,
       'G9-11': 0,
       'G12-14': 0,
       'G15-18': 0,
@@ -206,7 +214,7 @@ function InternalView({ surveyData, setSurveyData, goals, onBack }: InternalView
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `todos_participantes_caspio660_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `todos_participantes_proyecto${currentUser?.projectNumber}_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -250,7 +258,7 @@ function InternalView({ surveyData, setSurveyData, goals, onBack }: InternalView
           
           <h1 className="text-2xl font-bold text-white text-center flex-1">
             <Users className="inline mr-3" size={28} />
-            ADMINISTRACIÓN INTERNA - CASPIO 660
+            ADMINISTRACIÓN INTERNA - PROYECTO {currentUser?.projectNumber}
           </h1>
 
           <div className="flex gap-2">
@@ -427,11 +435,11 @@ function InternalView({ surveyData, setSurveyData, goals, onBack }: InternalView
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center p-4 bg-white/5 rounded-xl">
             <div className="text-2xl font-bold text-white">
-              {tempData['G9-11'] + tempData['G12-14'] + tempData['G15-18'] + tempData['G19+']}
+              {tempData['G6-8'] + tempData['G9-11'] + tempData['G12-14'] + tempData['G15-18'] + tempData['G19+']}
             </div>
-            <div className="text-blue-200 text-sm">Total L2 + SM</div>
+            <div className="text-blue-200 text-sm">Total L1/L2 + SM</div>
             <div className="text-xs text-green-400">
-              Meta: {goals['G9-11'] + goals['G12-14'] + goals['G15-18'] + goals['G19+']}
+              Meta: {goals['G6-8'] + goals['G9-11'] + goals['G12-14'] + goals['G15-18'] + goals['G19+']}
             </div>
           </div>
           <div className="text-center p-4 bg-white/5 rounded-xl">
@@ -458,7 +466,7 @@ function InternalView({ surveyData, setSurveyData, goals, onBack }: InternalView
         </div>
 
         {/* Participant Summary */}
-        <div className="mt-6 grid grid-cols-5 gap-4">
+        <div className="mt-6 grid grid-cols-6 gap-4">
           {groupConfigs.map((config) => {
             const groupParticipants = participantData[config.key as keyof SurveyData];
             return (

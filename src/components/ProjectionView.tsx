@@ -6,13 +6,15 @@ import ProgressChart from './ProgressChart';
 interface ProjectionViewProps {
   surveyData: SurveyData;
   goals: Record<keyof SurveyData, number>;
+  currentUser: any;
   onBack: () => void;
   isStandalone?: boolean;
 }
 
-function ProjectionView({ surveyData, goals, onBack, isStandalone = false }: ProjectionViewProps) {
+function ProjectionView({ surveyData, goals, currentUser, onBack, isStandalone = false }: ProjectionViewProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [localSurveyData, setLocalSurveyData] = useState<SurveyData>(surveyData);
+  const [localGoals, setLocalGoals] = useState<SurveyData>(goals);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -26,18 +28,23 @@ function ProjectionView({ surveyData, goals, onBack, isStandalone = false }: Pro
   useEffect(() => {
     // Update local state when props change
     setLocalSurveyData(surveyData);
-  }, [surveyData]);
+    setLocalGoals(goals);
+  }, [surveyData, goals]);
 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'surveyData' && e.newValue) {
-        const newData = JSON.parse(e.newValue);
-        setLocalSurveyData(newData);
+      if (currentUser && e.key === `surveyData_${currentUser.username}` && e.newValue) {
+        setLocalSurveyData(JSON.parse(e.newValue));
+      }
+      if (currentUser && e.key === `userGoals_${currentUser.username}` && e.newValue) {
+        setLocalGoals(JSON.parse(e.newValue));
       }
     };
 
     const handleCustomUpdate = (e: CustomEvent) => {
-      setLocalSurveyData(e.detail);
+      if (currentUser && e.detail.project === currentUser.username) {
+        setLocalSurveyData(e.detail.surveyData);
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -47,33 +54,24 @@ function ProjectionView({ surveyData, goals, onBack, isStandalone = false }: Pro
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('surveyDataUpdate', handleCustomUpdate as EventListener);
     };
-  }, []);
+  }, [currentUser]);
 
   const openInNewWindow = () => {
-    const projectionUrl = `${window.location.origin}${window.location.pathname}?mode=projection&auth=true`;
+    const dataParam = encodeURIComponent(JSON.stringify(surveyData));
+    const goalsParam = encodeURIComponent(JSON.stringify(goals));
+    const projectionUrl = `${window.location.origin}${window.location.pathname}?mode=projection&auth=true&project=${currentUser?.username}&data=${dataParam}&goals=${goalsParam}`;
     const projectionWindow = window.open(
       projectionUrl, 
       'projection', 
       'width=1920,height=1080,fullscreen=yes,toolbar=no,menubar=no,scrollbars=no'
     );
-    
-    if (projectionWindow) {
-      // Transferir datos a la nueva ventana
-      projectionWindow.addEventListener('load', () => {
-        projectionWindow.postMessage({
-          type: 'INIT_PROJECTION',
-          surveyData,
-          goals,
-          authenticated: true
-        }, '*');
-      });
-    }
   };
 
-  const totalL2SM = surveyData['G9-11'] + surveyData['G12-14'] + surveyData['G15-18'] + surveyData['G19+'];
-  const totalL2SMGoal = goals['G9-11'] + goals['G12-14'] + goals['G15-18'] + goals['G19+'];
+  const totalL2SM = localSurveyData['G6-8'] + localSurveyData['G9-11'] + localSurveyData['G12-14'] + localSurveyData['G15-18'] + localSurveyData['G19+'];
+  const totalL2SMGoal = localGoals['G6-8'] + localGoals['G9-11'] + localGoals['G12-14'] + localGoals['G15-18'] + localGoals['G19+'];
 
   const chartConfigs = [
+    { key: 'G6-8', title: 'Grupo Etario G6-8', color: '#ff69b4', surveyType: 'L1 (15 min)' },
     { key: 'G9-11', title: 'Grupo Etario G9-11', color: '#ff7f7f', surveyType: 'L2 (30 min)' },
     { key: 'G12-14', title: 'Grupo Etario G12-14', color: '#4a90e2', surveyType: 'L2 + SM Jóvenes' },
     { key: 'G15-18', title: 'Grupo Etario G15-18', color: '#8e44ad', surveyType: 'L2 + SM Jóvenes' },
@@ -99,7 +97,7 @@ function ProjectionView({ surveyData, goals, onBack, isStandalone = false }: Pro
           {isStandalone && <div className="w-32"></div>}
           
           <h1 className="text-2xl font-bold text-white text-center flex-1">
-            PROYECCIÓN DE RESULTADOS - CASPIO 660
+            PROYECCIÓN DE RESULTADOS - PROYECTO {currentUser?.projectNumber}
           </h1>
 
           {!isStandalone && (
@@ -154,16 +152,16 @@ function ProjectionView({ surveyData, goals, onBack, isStandalone = false }: Pro
             key={config.key}
             title={config.title}
             current={localSurveyData[config.key as keyof SurveyData]}
-            goal={goals[config.key as keyof SurveyData]}
+            goal={localGoals[config.key as keyof SurveyData]}
             color={config.color}
             surveyType={config.surveyType}
           />
         ))}
 
-        {/* Total L2 Y SM Chart */}
+        {/* Total L1/L2 Y SM Chart */}
         <ProgressChart
-          title="Total RESULTADOS L2 Y SM"
-          current={localSurveyData['G9-11'] + localSurveyData['G12-14'] + localSurveyData['G15-18'] + localSurveyData['G19+']}
+          title="Total RESULTADOS L1/L2 Y SM"
+          current={totalL2SM}
           goal={totalL2SMGoal}
           color="#e74c3c"
           surveyType="Total (Excluye Staff)"
@@ -174,7 +172,7 @@ function ProjectionView({ surveyData, goals, onBack, isStandalone = false }: Pro
       {/* Footer */}
       <footer className="text-center text-blue-200">
         <div className="glass rounded-full px-6 py-3 inline-block">
-          2025 By AVG TECH - Sistema de Logística CASPIO 660
+          2025 By AVG TECH - Sistema de Logística CASPIO PROYECTO {currentUser?.projectNumber}
         </div>
       </footer>
     </div>

@@ -3,16 +3,17 @@ import { ArrowLeft, Database, Upload, Download, Plus, Trash2, Search, Users, Edi
 import { ParticipantRecord } from '../data/participantDatabase';
 
 interface ParticipantDatabaseProps {
+  currentUser: any;
   onBack: () => void;
 }
 
-function ParticipantDatabase({ onBack }: ParticipantDatabaseProps) {
+function ParticipantDatabase({ currentUser, onBack }: ParticipantDatabaseProps) {
   const [participants, setParticipants] = useState<ParticipantRecord[]>([]);
   const [filteredParticipants, setFilteredParticipants] = useState<ParticipantRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [newParticipant, setNewParticipant] = useState({ code: '', name: '', defaultGroup: 'G9-11' });
+  const [newParticipant, setNewParticipant] = useState({ code: '', name: '', defaultGroup: 'G6-8' });
   const [showAddForm, setShowAddForm] = useState(false);
   const [showMassAddForm, setShowMassAddForm] = useState(false);
   const [massAddText, setMassAddText] = useState('');
@@ -113,7 +114,7 @@ function ParticipantDatabase({ onBack }: ParticipantDatabaseProps) {
       
       if (newParticipants.length > 0) {
         setParticipants(newParticipants);
-        localStorage.setItem('participantDatabase', JSON.stringify(newParticipants));
+        localStorage.setItem(`participantDatabase_${currentUser?.username}`, JSON.stringify(newParticipants));
         setImportStats({ added: newParticipants.length, duplicates, errors });
         
         console.log('Participantes cargados exitosamente:', {
@@ -125,16 +126,13 @@ function ParticipantDatabase({ onBack }: ParticipantDatabaseProps) {
       
     } catch (error) {
       console.error('Error cargando name.json:', error);
-      // Fallback a la base de datos por defecto
-      import('../data/participantDatabase').then(module => {
-        setParticipants(module.participantDatabase);
-        localStorage.setItem('participantDatabase', JSON.stringify(module.participantDatabase));
-      });
+      alert('Error cargando name.json. Verifica que el archivo exista y tenga el formato correcto.');
     }
   };
 
   const groups = [
     { value: 'all', label: 'Todos los Grupos' },
+    { value: 'G6-8', label: 'G6-8 (Menores de 9 años)' },
     { value: 'G9-11', label: 'G9-11 (Menores de 12 años)' },
     { value: 'G12-14', label: 'G12-14 (12 a 14 años)' },
     { value: 'G15-18', label: 'G15-18 (15 a 18 años)' },
@@ -144,15 +142,12 @@ function ParticipantDatabase({ onBack }: ParticipantDatabaseProps) {
 
   // Load participants from localStorage on mount
   useEffect(() => {
-    const savedParticipants = localStorage.getItem('participantDatabase');
+    const savedParticipants = localStorage.getItem(`participantDatabase_${currentUser?.username}`);
     if (savedParticipants) {
       const parsed = JSON.parse(savedParticipants);
       setParticipants(parsed);
-    } else {
-      // Load participants from name.json file
-      loadNameJsonFile();
     }
-  }, []);
+  }, [currentUser]);
 
   // Filter participants based on search and group
   useEffect(() => {
@@ -174,10 +169,10 @@ function ParticipantDatabase({ onBack }: ParticipantDatabaseProps) {
 
   // Save participants to localStorage whenever they change
   useEffect(() => {
-    if (participants.length > 0) {
-      localStorage.setItem('participantDatabase', JSON.stringify(participants));
+    if (participants.length > 0 && currentUser) {
+      localStorage.setItem(`participantDatabase_${currentUser.username}`, JSON.stringify(participants));
     }
-  }, [participants]);
+  }, [participants, currentUser]);
 
   const addParticipant = (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,7 +180,7 @@ function ParticipantDatabase({ onBack }: ParticipantDatabaseProps) {
       const exists = participants.some(p => p.code === newParticipant.code);
       if (!exists) {
         setParticipants(prev => [...prev, { ...newParticipant }]);
-        setNewParticipant({ code: '', name: '', defaultGroup: 'G9-11' });
+        setNewParticipant({ code: '', name: '', defaultGroup: 'G6-8' });
         setShowAddForm(false);
       } else {
         alert('Ya existe un participante con ese código');
@@ -217,7 +212,7 @@ function ParticipantDatabase({ onBack }: ParticipantDatabaseProps) {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `base_datos_participantes_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `base_datos_participantes_proyecto${currentUser?.projectNumber}_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -334,7 +329,7 @@ function ParticipantDatabase({ onBack }: ParticipantDatabaseProps) {
                     normalizedGroup = 'STAFF';
                   }
                   
-                  const validGroups = ['G9-11', 'G12-14', 'G15-18', 'G19+', 'STAFF'];
+                  const validGroups = ['G6-8', 'G9-11', 'G12-14', 'G15-18', 'G19+', 'STAFF'];
                   if (!validGroups.includes(group)) {
                     if (!validGroups.includes(normalizedGroup)) {
                       errors++;
@@ -415,7 +410,7 @@ Total procesados: ${participantsArray.length}`;
           }
         } catch (error) {
           console.error('Error al procesar archivo:', error);
-          alert(`Error al procesar el archivo: ${error.message}\n\nVerifica que:\n- El archivo sea un JSON válido\n- Contenga los campos: code, name, group\n- Los grupos sean válidos: G9-11, G12-14, G15-18, G19+, STAFF`);
+          alert(`Error al procesar el archivo: ${error.message}\n\nVerifica que:\n- El archivo sea un JSON válido\n- Contenga los campos: code, name, group\n- Los grupos sean válidos: G6-8, G9-11, G12-14, G15-18, G19+, STAFF`);
         }
       };
       reader.readAsText(file);
@@ -439,7 +434,7 @@ Total procesados: ${participantsArray.length}`;
       
       participantsArray.forEach((item: any, index: number) => {
         if (item.code && item.name && item.group) {
-          const validGroups = ['G9-11', 'G12-14', 'G15-18', 'G19+', 'STAFF'];
+          const validGroups = ['G6-8', 'G9-11', 'G12-14', 'G15-18', 'G19+', 'STAFF'];
           if (!validGroups.includes(item.group)) {
             errors.push(`Elemento ${index + 1}: Grupo "${item.group}" no válido`);
             return;
@@ -471,7 +466,7 @@ Total procesados: ${participantsArray.length}`;
           const [code, name, group] = parts;
           
           // Validar que el grupo sea válido
-          const validGroups = ['G9-11', 'G12-14', 'G15-18', 'G19+', 'STAFF'];
+          const validGroups = ['G6-8', 'G9-11', 'G12-14', 'G15-18', 'G19+', 'STAFF'];
           if (!validGroups.includes(group)) {
             errors.push(`Línea ${index + 1}: Grupo "${group}" no válido`);
             return;
@@ -538,7 +533,7 @@ Total procesados: ${participantsArray.length}`;
           
           <h1 className="text-2xl font-bold text-white text-center flex-1">
             <Database className="inline mr-3" size={28} />
-            BASE DE DATOS DE PARTICIPANTES - CASPIO 660
+            BASE DE DATOS DE PARTICIPANTES - PROYECTO {currentUser?.projectNumber}
           </h1>
 
           <div className="flex gap-2">
@@ -573,7 +568,7 @@ Total procesados: ${participantsArray.length}`;
       {/* Statistics */}
       <div className="glass rounded-2xl p-6 mb-6">
         <h3 className="text-xl font-bold text-white mb-4">Estadísticas de la Base de Datos</h3>
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
           <div className="text-center p-4 bg-white/5 rounded-xl">
             <div className="text-2xl font-bold text-white">{participants.length}</div>
             <div className="text-blue-200 text-sm">Total</div>
@@ -716,6 +711,7 @@ Total procesados: ${participantsArray.length}`;
                 value={massAddText}
                 onChange={(e) => setMassAddText(e.target.value)}
                 placeholder={`Ejemplo:
+001,Ana María González,G6-8
 001,Ana María González,G9-11
 102,Kevin Andrés Morales,G12-14
 203,Paola Andrea Castillo,G15-18
@@ -833,6 +829,7 @@ S05,Coordinador de Logística,STAFF`}
                           </select>
                         ) : (
                           <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                            participant.defaultGroup === 'G6-8' ? 'bg-pink-500/30 text-pink-200' :
                             participant.defaultGroup === 'G9-11' ? 'bg-red-500/30 text-red-200' :
                             participant.defaultGroup === 'G12-14' ? 'bg-blue-500/30 text-blue-200' :
                             participant.defaultGroup === 'G15-18' ? 'bg-purple-500/30 text-purple-200' :
@@ -945,6 +942,7 @@ S05,Coordinador de Logística,STAFF`}
               <li>• Formato JSON: Estructura simple o compleja con horarios</li>
               <li>• Mapea automáticamente grupos especiales a STAFF</li>
               <li>• Los datos se sincronizan automáticamente</li>
+              <li>• Incluye el nuevo grupo G6-8 para menores de 9 años</li>
             </ul>
           </div>
           <div>
@@ -953,6 +951,7 @@ S05,Coordinador de Logística,STAFF`}
               <li>• Descarga CSV con código, nombre, tutor, grupo y teléfonos</li>
               <li>• Compatible con Excel y Google Sheets</li>
               <li>• Incluye fecha en el nombre del archivo</li>
+              <li>• Datos específicos por proyecto</li>
             </ul>
           </div>
           <div>
@@ -970,6 +969,7 @@ S05,Coordinador de Logística,STAFF`}
               <li>• Los cambios se guardan automáticamente</li>
               <li>• Disponible en administración interna y remota</li>
               <li>• Incluye información de tutores y teléfonos</li>
+              <li>• Datos separados por usuario/proyecto</li>
               <li>• Mapea grupos especiales automáticamente</li>
             </ul>
           </div>

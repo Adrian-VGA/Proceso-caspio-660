@@ -1,115 +1,250 @@
-import React, { useState } from 'react';
-import { Shield, Eye, EyeOff } from 'lucide-react';
-import { authenticateUser } from '../services/userService';
+import React, { useState, useEffect } from 'react';
+import Login from './components/Login';
+import ProjectionView from './components/ProjectionView';
+import InternalView from './components/InternalView';
+import RemoteAdmin from './components/RemoteAdmin';
+import MobileRemoteControl from './components/MobileRemoteControl';
+import ParticipantDatabase from './components/ParticipantDatabase';
+import { SurveyData } from './types/survey';
 
-interface LoginProps {
-  onLogin: (success: boolean, username?: string) => void;
-}
+function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentView, setCurrentView] = useState<'main' | 'projection' | 'internal' | 'remote' | 'database'>('main');
+  const [isProjectionMode, setIsProjectionMode] = useState(false);
+  const [surveyData, setSurveyData] = useState<SurveyData>({
+    'G6-8': 0,
+    'G9-11': 0,
+    'G12-14': 0,
+    'G15-18': 0,
+    'G19+': 0,
+    'STAFF': 0
+  });
 
-function Login({ onLogin }: LoginProps) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    // Simular delay de autenticación
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    if (authenticateUser(username, password)) {
-      onLogin(true, username);
-    } else {
-      setError('Credenciales incorrectas');
-      onLogin(false);
-    }
+  const goals = {
+    'G6-8': 30,
+    'G9-11': 46,
+    'G12-14': 41,
+    'G15-18': 46,
+    'G19+': 44,
+    'STAFF': 14
+  };
+      const user = urlParams.get('user') || currentUser;
+  // Check URL parameters for projection mode and authentication
+  const handleLogin = async (success: boolean, username?: string) => {
+    if (!success || !username) return;
     
-    setIsLoading(false);
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    const auth = urlParams.get('auth');
+    
+    if (mode === 'projection' && auth === 'true') {
+      setIsAuthenticated(true);
+      setIsProjectionMode(true);
+      setCurrentView('projection');
+      
+      // Load data from URL parameters
+      const dataParam = urlParams.get('data');
+      if (dataParam) {
+        try {
+      const user = urlParams.get('user') || currentUser;
+          setSurveyData(decodedData);
+        } catch (error) {
+          console.error('Error parsing data from URL:', error);
+        }
+        const savedData = localStorage.getItem(`surveyData_${user}`);
+    } else if (mode === 'remote') {
+      const sessionId = urlParams.get('session');
+      if (sessionId) {
+        setCurrentView('remote');
+        // Load data for remote session
+        const savedData = localStorage.getItem('surveyData');
+        if (savedData) {
+          setSurveyData(JSON.parse(savedData));
+        }
+      }
+    }
+      
+      // Auto-save to user profile
+      if (userProfile) {
+        const updatedProfile = { ...userProfile, surveyData };
+        saveUserProfile(updatedProfile);
+        setUserProfile(updatedProfile);
+      }
+  }, []);
+
+  // Save data to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('surveyData', JSON.stringify(surveyData));
+    
+    // Broadcast changes to other windows/tabs
+    window.dispatchEvent(new CustomEvent('surveyDataUpdate', { 
+      detail: surveyData 
+    }));
+  }, [surveyData]);
+
+  // Listen for data updates from other windows
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'surveyData' && e.newValue) {
+        setSurveyData(JSON.parse(e.newValue));
+      }
+    };
+
+    const handleCustomUpdate = (e: CustomEvent) => {
+      setSurveyData(e.detail);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('surveyDataUpdate', handleCustomUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+  }, [currentUser]);
+    };
+  }, []);
+
+  // Load saved data on component mount
+  useEffect(() => {
+      if (savedData) {
+        setSurveyData(JSON.parse(savedData));
+      }
+    }
+  }, []);
+
+  const openProjectionWindow = () => {
+    const dataParam = encodeURIComponent(JSON.stringify(surveyData));
+    const url = `${window.location.origin}${window.location.pathname}?mode=projection&auth=true&data=${dataParam}`;
+    
+    window.open(url, 'projection', 'width=1920,height=1080,fullscreen=yes,toolbar=no,menubar=no,scrollbars=no,resizable=yes');
   };
 
+  if (!isAuthenticated && currentView !== 'remote') {
+    return <Login onLogin={setIsAuthenticated} />;
+  }
+      const updatedProfile = { ...userProfile, surveyData };
+  if (isProjectionMode || currentView === 'projection') {
+    return (
+      <ProjectionView 
+        surveyData={surveyData} 
+        goals={goals} 
+        currentUser={currentUser}
+        onBack={() => setCurrentView('main')}
+        isStandalone={isProjectionMode}
+      />
+    );
+  }
+
+  if (currentView === 'remote') {
+    const sessionId = new URLSearchParams(window.location.search).get('session') || '';
+    return <MobileRemoteControl 
+      sessionId={sessionId}
+      currentUser={currentUser}
+      surveyData={surveyData}
+      setSurveyData={setSurveyData} 
+      goals={goals} 
+    />;
+  }
+
+  if (currentView === 'internal') {
+    return (
+      <InternalView 
+        surveyData={surveyData} 
+        setSurveyData={setSurveyData} 
+        goals={goals}
+        currentUser={currentUser}
+        userProfile={userProfile}
+        onBack={() => setCurrentView('main')}
+      />
+    );
+  }
+
+  if (currentView === 'remoteAdmin') {
+    return (
+      <RemoteAdmin 
+        surveyData={surveyData}
+        setSurveyData={setSurveyData}
+        goals={goals}
+        onBack={() => setCurrentView('main')}
+      />
+    );
+  }
+
+  if (currentView === 'database') {
+    return (
+      <ParticipantDatabase 
+        onBack={() => setCurrentView('main')}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-indigo-900 flex items-center justify-center p-8">
-      <div className="glass rounded-3xl p-12 w-full max-w-md">
-        <div className="text-center mb-10">
-          <div className="bg-gradient-to-br from-blue-400 to-purple-500 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <Shield className="text-white" size={40} />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Bienvenido</h1>
-          <h2 className="text-xl text-blue-200 mb-2">LA LOGÍSTICA DE</h2>
-          <h2 className="text-2xl font-bold text-white">CASPIO</h2>
-          <p className="text-blue-300 mt-4">Ingresa tus credenciales para continuar</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
+      <div className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-3xl p-12 shadow-2xl max-w-2xl w-full">
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold text-white mb-4 tracking-wide">
+            LA LOGÍSTICA DE CASPIO 660
+          </h1>
+          <p className="text-xl text-blue-200">Sistema de Gestión de Encuestas</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-blue-200 text-sm font-medium mb-2">
-              Usuario
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-              placeholder="Ingresa tu usuario"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-blue-200 text-sm font-medium mb-2">
-              Contraseña
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 pr-12"
-                placeholder="Ingresa tu contraseña"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-300 hover:text-white transition-colors"
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
+        <div className="space-y-6">
+          <button
+            onClick={() => setCurrentView('projection')}
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-6 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+          >
+            <div className="flex items-center justify-center space-x-3">
+              <span className="text-2xl">📊</span>
+              <span className="text-xl">PROYECTAR GRÁFICAS</span>
             </div>
-          </div>
-
-          {error && (
-            <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-3 text-red-200 text-sm">
-              {error}
-            </div>
-          )}
+          </button>
 
           <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-4 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-300 shadow-lg disabled:opacity-50"
+            onClick={openProjectionWindow}
+            className="w-full bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white font-semibold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
           >
-            {isLoading ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                Verificando...
-              </div>
-            ) : (
-              'Abrir Sistema'
-            )}
+            <div className="flex items-center justify-center space-x-3">
+              <span className="text-xl">🖥️</span>
+              <span className="text-lg">ABRIR EN PANTALLA EXTERNA</span>
+            </div>
           </button>
-        </form>
 
-        <footer className="text-center mt-8 text-blue-300 text-sm">
-          2025 By AVG TECH
+          <button
+            onClick={() => setCurrentView('internal')}
+            className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold py-6 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+          >
+            <div className="flex items-center justify-center space-x-3">
+              <span className="text-2xl">⚙️</span>
+              <span className="text-xl">ADMINISTRACIÓN INTERNA</span>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setCurrentView('remoteAdmin')}
+            className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-semibold py-6 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+          >
+            <div className="flex items-center justify-center space-x-3">
+              <span className="text-2xl">📱</span>
+              <span className="text-xl">ADMINISTRACIÓN REMOTA (QR)</span>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setCurrentView('database')}
+            className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white font-semibold py-6 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+          >
+            <div className="flex items-center justify-center space-x-3">
+              <span className="text-2xl">🗃️</span>
+              <span className="text-xl">BASE DE PARTICIPANTES</span>
+            </div>
+          </button>
+        </div>
+
+        <footer className="mt-12 text-center">
+          <p className="text-white/70 text-sm">2025 By AVG TECH</p>
         </footer>
       </div>
     </div>
   );
 }
 
-export default Login;
+export default App;

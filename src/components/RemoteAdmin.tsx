@@ -7,22 +7,23 @@ interface RemoteAdminProps {
   surveyData: SurveyData;
   setSurveyData: React.Dispatch<React.SetStateAction<SurveyData>>;
   goals: Record<keyof SurveyData, number>;
+  currentUser: any;
   onBack: () => void;
 }
 
-function RemoteAdmin({ surveyData, setSurveyData, goals, onBack }: RemoteAdminProps) {
+function RemoteAdmin({ surveyData, setSurveyData, goals, currentUser, onBack }: RemoteAdminProps) {
   const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
   const [connectedDevices, setConnectedDevices] = useState<string[]>([]);
   const [showQR, setShowQR] = useState(false);
   const [tempData, setTempData] = useState<SurveyData>({ ...surveyData });
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
-  const remoteUrl = `${window.location.origin}${window.location.pathname}?mode=remote&session=${sessionId}`;
+  const remoteUrl = `${window.location.origin}${window.location.pathname}?mode=remote&session=${sessionId}&project=${currentUser?.username}`;
 
   useEffect(() => {
     // Simular conexiones remotas (en producción usarías WebSockets)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === `caspio-remote-${sessionId}`) {
+      if (e.key === `caspio-remote-${sessionId}-${currentUser?.username}`) {
         const remoteData = JSON.parse(e.newValue || '{}');
         if (remoteData.surveyData) {
           setTempData(remoteData.surveyData);
@@ -33,9 +34,18 @@ function RemoteAdmin({ surveyData, setSurveyData, goals, onBack }: RemoteAdminPr
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [sessionId, setSurveyData]);
+  }, [sessionId, setSurveyData, currentUser]);
 
   const groupConfigs = [
+    { 
+      key: 'G6-8', 
+      title: 'Grupo Etario G6-8', 
+      color: 'from-pink-400 to-pink-500',
+      bgColor: 'bg-pink-500/20',
+      borderColor: 'border-pink-500/30',
+      surveyType: 'L1 (15 minutos)',
+      description: 'Menores de 9 años'
+    },
     { 
       key: 'G9-11', 
       title: 'Grupo Etario G9-11', 
@@ -43,7 +53,7 @@ function RemoteAdmin({ surveyData, setSurveyData, goals, onBack }: RemoteAdminPr
       bgColor: 'bg-red-500/20',
       borderColor: 'border-red-500/30',
       surveyType: 'L2 (30 minutos)',
-      description: 'Menores de 12 años'
+      description: '9 a 11 años'
     },
     { 
       key: 'G12-14', 
@@ -94,7 +104,7 @@ function RemoteAdmin({ surveyData, setSurveyData, goals, onBack }: RemoteAdminPr
     setSurveyData(newData);
     
     // Sincronizar con dispositivos remotos
-    localStorage.setItem(`caspio-remote-${sessionId}`, JSON.stringify({ surveyData: newData }));
+    localStorage.setItem(`caspio-remote-${sessionId}-${currentUser?.username}`, JSON.stringify({ surveyData: newData }));
   };
 
   const setDirectValue = (key: keyof SurveyData, value: string) => {
@@ -107,7 +117,7 @@ function RemoteAdmin({ surveyData, setSurveyData, goals, onBack }: RemoteAdminPr
     setSurveyData(newData);
     
     // Sincronizar con dispositivos remotos
-    localStorage.setItem(`caspio-remote-${sessionId}`, JSON.stringify({ surveyData: newData }));
+    localStorage.setItem(`caspio-remote-${sessionId}-${currentUser?.username}`, JSON.stringify({ surveyData: newData }));
   };
 
   return (
@@ -125,7 +135,7 @@ function RemoteAdmin({ surveyData, setSurveyData, goals, onBack }: RemoteAdminPr
           
           <h1 className="text-2xl font-bold text-white text-center flex-1">
             <Smartphone className="inline mr-3" size={28} />
-            ADMINISTRACIÓN REMOTA - CASPIO 660
+            ADMINISTRACIÓN REMOTA - PROYECTO {currentUser?.projectNumber}
           </h1>
 
           <button
@@ -156,7 +166,7 @@ function RemoteAdmin({ surveyData, setSurveyData, goals, onBack }: RemoteAdminPr
             </div>
             <div className="mt-4 flex items-center justify-center gap-2 text-green-300">
               <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-sm">Sesión activa - ID: {sessionId}</span>
+              <span className="text-sm">Sesión activa - Proyecto {currentUser?.projectNumber}</span>
             </div>
           </div>
         </div>
@@ -259,11 +269,11 @@ function RemoteAdmin({ surveyData, setSurveyData, goals, onBack }: RemoteAdminPr
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center p-4 bg-white/5 rounded-xl">
             <div className="text-2xl font-bold text-white">
-              {tempData['G9-11'] + tempData['G12-14'] + tempData['G15-18'] + tempData['G19+']}
+              {tempData['G6-8'] + tempData['G9-11'] + tempData['G12-14'] + tempData['G15-18'] + tempData['G19+']}
             </div>
-            <div className="text-blue-200 text-sm">Total L2 + SM</div>
+            <div className="text-blue-200 text-sm">Total L1/L2 + SM</div>
             <div className="text-xs text-green-400">
-              Meta: {goals['G9-11'] + goals['G12-14'] + goals['G15-18'] + goals['G19+']}
+              Meta: {goals['G6-8'] + goals['G9-11'] + goals['G12-14'] + goals['G15-18'] + goals['G19+']}
             </div>
           </div>
           <div className="text-center p-4 bg-white/5 rounded-xl">

@@ -4,15 +4,17 @@ import { SurveyData } from '../types/survey';
 
 interface MobileRemoteControlProps {
   sessionId: string;
+  projectNumber: string;
   surveyData: SurveyData;
   setSurveyData: React.Dispatch<React.SetStateAction<SurveyData>>;
   goals: Record<keyof SurveyData, number>;
 }
 
-function MobileRemoteControl({ sessionId, surveyData, setSurveyData, goals }: MobileRemoteControlProps) {
+function MobileRemoteControl({ sessionId, projectNumber, surveyData, setSurveyData, goals }: MobileRemoteControlProps) {
   const [isConnected, setIsConnected] = useState(true);
 
   const groupConfigs = [
+    { key: 'G6-8', title: 'G6-8', color: '#ff69b4', surveyType: 'L1 (15 min)' },
     { key: 'G9-11', title: 'G9-11', color: '#ff7f7f', surveyType: 'L2 (30 min)' },
     { key: 'G12-14', title: 'G12-14', color: '#4a90e2', surveyType: 'L2 + SM' },
     { key: 'G15-18', title: 'G15-18', color: '#8e44ad', surveyType: 'L2 + SM' },
@@ -31,9 +33,9 @@ function MobileRemoteControl({ sessionId, surveyData, setSurveyData, goals }: Mo
     
     // Sincronizar con la aplicación principal
     try {
-      localStorage.setItem(`caspio-remote-${sessionId}`, JSON.stringify({ surveyData: newData }));
+      localStorage.setItem(`caspio-remote-${sessionId}-${projectNumber}`, JSON.stringify({ surveyData: newData }));
       window.dispatchEvent(new StorageEvent('storage', {
-        key: `caspio-remote-${sessionId}`,
+        key: `caspio-remote-${sessionId}-${projectNumber}`,
         newValue: JSON.stringify({ surveyData: newData })
       }));
     } catch (error) {
@@ -51,7 +53,7 @@ function MobileRemoteControl({ sessionId, surveyData, setSurveyData, goals }: Mo
             <Smartphone className="text-white" size={24} />
             <div>
               <h1 className="text-lg font-bold text-white">Control Remoto</h1>
-              <p className="text-blue-200 text-sm">CASPIO 660</p>
+              <p className="text-blue-200 text-sm">PROYECTO {projectNumber}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
