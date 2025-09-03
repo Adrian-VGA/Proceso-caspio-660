@@ -39,7 +39,7 @@ function Login({ onLogin }: LoginProps) {
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">Bienvenido</h1>
           <h2 className="text-xl text-blue-200 mb-2">LA LOGÍSTICA DE</h2>
-          <h2 className="text-2xl font-bold text-white">CASPIO 660</h2>
+          <h2 className="text-2xl font-bold text-white">CASPIO</h2>
           <p className="text-blue-300 mt-4">Ingresa tus credenciales para continuar</p>
         </div>
 
