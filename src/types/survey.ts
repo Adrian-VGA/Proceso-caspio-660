@@ -1,4 +1,5 @@
 export interface SurveyData {
+  'G6-8': number;
   'G9-11': number;
   'G12-14': number;
   'G15-18': number;
@@ -15,6 +16,7 @@ export interface Participant {
 }
 
 export interface ParticipantData {
+  'G6-8': Participant[];
   'G9-11': Participant[];
   'G12-14': Participant[];
   'G15-18': Participant[];
@@ -22,10 +24,21 @@ export interface ParticipantData {
   'STAFF': Participant[];
 }
 
-export interface GroupConfig {
-  key: keyof SurveyData;
-  title: string;
-  color: string;
-  surveyType: string;
-  description: string;
+export interface SavedProgress {
+  id: string;
+  name: string;
+  date: string;
+  surveyData: SurveyData;
+  participantData: ParticipantData;
+  userId: string;
+}
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  projectNumber: string;
+  surveyData: SurveyData;
+  goals: SurveyData;
+  participantData: ParticipantData;
+  savedProgresses: SavedProgress[];
 }

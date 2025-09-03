@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Shield, Eye, EyeOff } from 'lucide-react';
+import { authenticateUser } from '../services/userService';
 
 interface LoginProps {
-  onLogin: (success: boolean) => void;
+  onLogin: (success: boolean, username?: string) => void;
 }
 
 function Login({ onLogin }: LoginProps) {
@@ -20,8 +21,8 @@ function Login({ onLogin }: LoginProps) {
     // Simular delay de autenticación
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    if (username === '660' && password === '2025') {
-      onLogin(true);
+    if (authenticateUser(username, password)) {
+      onLogin(true, username);
     } else {
       setError('Credenciales incorrectas');
       onLogin(false);
