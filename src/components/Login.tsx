@@ -28,7 +28,7 @@ function App() {
     'G19+': 44,
     'STAFF': 14
   };
-      const user = urlParams.get('user') || currentUser;
+
   // Check URL parameters for projection mode and authentication
   const handleLogin = async (success: boolean, username?: string) => {
     if (!success || !username) return;
@@ -36,6 +36,7 @@ function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
     const auth = urlParams.get('auth');
+    const user = urlParams.get('user') || currentUser;
     
     if (mode === 'projection' && auth === 'true') {
       setIsAuthenticated(true);
@@ -46,12 +47,13 @@ function App() {
       const dataParam = urlParams.get('data');
       if (dataParam) {
         try {
-      const user = urlParams.get('user') || currentUser;
+          const decodedData = JSON.parse(decodeURIComponent(dataParam));
           setSurveyData(decodedData);
         } catch (error) {
           console.error('Error parsing data from URL:', error);
         }
-        const savedData = localStorage.getItem(`surveyData_${user}`);
+      }
+      const savedData = localStorage.getItem(`surveyData_${user}`);
     } else if (mode === 'remote') {
       const sessionId = urlParams.get('session');
       if (sessionId) {
@@ -64,13 +66,13 @@ function App() {
       }
     }
       
-      // Auto-save to user profile
-      if (userProfile) {
-        const updatedProfile = { ...userProfile, surveyData };
-        saveUserProfile(updatedProfile);
-        setUserProfile(updatedProfile);
-      }
-  }, []);
+    // Auto-save to user profile
+    if (userProfile) {
+      const updatedProfile = { ...userProfile, surveyData };
+      saveUserProfile(updatedProfile);
+      setUserProfile(updatedProfile);
+    }
+  };
 
   // Save data to localStorage whenever it changes
   useEffect(() => {
@@ -99,17 +101,17 @@ function App() {
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-  }, [currentUser]);
+      window.removeEventListener('surveyDataUpdate', handleCustomUpdate as EventListener);
     };
   }, []);
 
   // Load saved data on component mount
   useEffect(() => {
-      if (savedData) {
-        setSurveyData(JSON.parse(savedData));
-      }
+    const savedData = localStorage.getItem(`surveyData_${currentUser}`);
+    if (savedData) {
+      setSurveyData(JSON.parse(savedData));
     }
-  }, []);
+  }, [currentUser]);
 
   const openProjectionWindow = () => {
     const dataParam = encodeURIComponent(JSON.stringify(surveyData));
@@ -121,7 +123,7 @@ function App() {
   if (!isAuthenticated && currentView !== 'remote') {
     return <Login onLogin={setIsAuthenticated} />;
   }
-      const updatedProfile = { ...userProfile, surveyData };
+
   if (isProjectionMode || currentView === 'projection') {
     return (
       <ProjectionView 
