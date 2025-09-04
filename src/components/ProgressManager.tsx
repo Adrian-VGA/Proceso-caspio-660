@@ -56,10 +56,10 @@ function ProgressManager({
 
     setIsLoading(true);
     const success = await saveProgress({
-      project_id: currentUser?.projectNumber,
+      user_id: currentUser?.projectNumber,
       name: progressName.trim(),
       survey_data: surveyData,
-      participants: participantData,
+      participant_data: participantData,
       goals: goals
     });
 
@@ -69,7 +69,7 @@ function ProgressManager({
       await loadSavedProgresses();
       setTimeout(() => setShowSaveSuccess(false), 2000);
     } else {
-      alert('Error al guardar el progreso. Si Supabase no está conectado, se guardará localmente.');
+      alert('Error al guardar el progreso. Verifica tu conexión a internet.');
     }
     setIsLoading(false);
   };

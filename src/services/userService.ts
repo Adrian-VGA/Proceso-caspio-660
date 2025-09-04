@@ -20,7 +20,7 @@ export interface SavedProgress {
   user_id: string;
   name: string;
   survey_data: Record<string, number>;
-  participants: any[];
+  participant_data: any[];
   goals: Record<string, number>;
   created_at?: string;
 }
@@ -93,7 +93,7 @@ export const saveProgress = async (progress: SavedProgress): Promise<boolean> =>
         user_id: progress.user_id,
         name: progress.name,
         survey_data: progress.survey_data,
-        participants: progress.participants,
+        participant_data: progress.participant_data,
         goals: progress.goals
       });
 
@@ -110,12 +110,15 @@ export const saveProgress = async (progress: SavedProgress): Promise<boolean> =>
 };
 
 // Obtener progresos guardados
-export const getSavedProgresses = async (userId: string): Promise<SavedProgress[]> => {
+export const getSavedProgresses = async (): Promise<SavedProgress[]> => {
+  const currentUser = getCurrentUser();
+  if (!currentUser) return [];
+  
   try {
     const { data, error } = await supabase
       .from('saved_progresses')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', currentUser.projectNumber)
       .order('created_at', { ascending: false });
 
     if (error) {
