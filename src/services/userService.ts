@@ -170,3 +170,17 @@ export const deleteProgress = async (progressId: string): Promise<boolean> => {
     return false;
   }
 };
+// Gestión de sesión de usuario
+export const saveCurrentUser = (username: string, projectNumber: string) => {
+  const userData = { username, projectNumber };
+  localStorage.setItem('currentUser', JSON.stringify(userData));
+};
+
+export const getCurrentUser = () => {
+  const userData = localStorage.getItem('currentUser');
+  return userData ? JSON.parse(userData) : null;
+};
+
+export const logout = () => {
+  localStorage.removeItem('currentUser');
+};

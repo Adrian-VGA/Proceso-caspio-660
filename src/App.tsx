@@ -8,7 +8,7 @@ import ParticipantDatabase from './components/ParticipantDatabase';
 import GoalsConfiguration from './components/GoalsConfiguration';
 import ProgressManager from './components/ProgressManager';
 import { SurveyData } from './types/survey';
-import { getCurrentUser, logout } from './services/userService';
+import { getCurrentUser, logout, saveCurrentUser } from './services/userService';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -151,6 +151,12 @@ function App() {
     };
   }, [currentUser]);
 
+  const handleLogin = (username: string, projectNumber: string) => {
+    saveCurrentUser(username, projectNumber);
+    setCurrentUser({ username, projectNumber });
+    setIsAuthenticated(true);
+  };
+
   const openProjectionWindow = () => {
     const dataParam = encodeURIComponent(JSON.stringify(surveyData));
     const goalsParam = encodeURIComponent(JSON.stringify(goals));
@@ -167,7 +173,7 @@ function App() {
   };
 
   if (!isAuthenticated && currentView !== 'remote') {
-    return <Login onLogin={setIsAuthenticated} />;
+    return <Login onLogin={handleLogin} />;
   }
 
   if (isProjectionMode || currentView === 'projection') {

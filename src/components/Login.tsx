@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Lock, User } from 'lucide-react';
 
 interface LoginProps {
-  onLogin: (success: boolean, username?: string) => void;
+  onLogin: (username: string, projectNumber: string) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -27,7 +27,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     if (validUsers.includes(username) && password === 'Caspio2025') {
-      onLogin(true, username);
+      onLogin(projectNumber, projectNumber);
     } else {
       setError('Usuario o contraseña incorrectos');
       onLogin(false);
