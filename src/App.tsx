@@ -165,8 +165,9 @@ function App() {
   }, [currentUser]);
 
   const handleLogin = (username: string, projectNumber: string) => {
-    saveCurrentUser(username, projectNumber);
-    setCurrentUser({ username, projectNumber });
+    const userData = { username, projectNumber: username }; // El username ES el número de proyecto
+    saveCurrentUser(username, username);
+    setCurrentUser(userData);
     setIsAuthenticated(true);
   };
 

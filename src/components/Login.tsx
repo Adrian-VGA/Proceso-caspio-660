@@ -27,10 +27,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     if (validUsers.includes(username) && password === 'Caspio2025') {
-      onLogin(username, username);
+      onLogin(username, username); // Pasar el username como projectNumber también
     } else {
       setError('Usuario o contraseña incorrectos');
-      onLogin(false);
+      // No llamar onLogin con false, solo mostrar error
     }
 
     setIsLoading(false);
