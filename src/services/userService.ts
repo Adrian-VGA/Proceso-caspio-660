@@ -1,177 +1,138 @@
-import { supabase } from '../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
-// Lista de usuarios válidos con sus proyectos
-const validUsers = [
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
+
+export interface UserProfile {
+  id?: string;
+  project_id: string;
+  survey_data: Record<string, number>;
+  goals: Record<string, number>;
+  participants: any[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SavedProgress {
+  id?: string;
+  project_id: string;
+  name: string;
+  survey_data: Record<string, number>;
+  participants: any[];
+  goals: Record<string, number>;
+  created_at?: string;
+}
+
+// Validar usuarios permitidos
+export const VALID_USERS = [
   '676', '684', '680', '662', '660', '667', '664', '675', 
   '674', '668', '679', '678', '681', '682', '677', '663', 
   '683', '673'
 ];
 
-const password = 'Caspio2025';
+export const validateUser = (projectId: string, password: string): boolean => {
+  return VALID_USERS.includes(projectId) && password === 'Caspio2025';
+};
 
-export interface UserSession {
-  username: string;
-  projectNumber: string;
-  isAuthenticated: boolean;
-}
-
-export function authenticateUser(username: string, inputPassword: string): boolean {
-  return validUsers.includes(username) && inputPassword === password;
-}
-
-export function getCurrentUser(): UserSession | null {
-  const saved = localStorage.getItem('currentUser');
-  return saved ? JSON.parse(saved) : null;
-}
-
-export function setCurrentUser(username: string): void {
-  const userSession: UserSession = {
-    username,
-    projectNumber: username,
-    isAuthenticated: true
-  };
-  localStorage.setItem('currentUser', JSON.stringify(userSession));
-}
-
-export function logout(): void {
-  localStorage.removeItem('currentUser');
-  localStorage.removeItem('surveyData');
-  localStorage.removeItem('participantData');
-  localStorage.removeItem('userGoals');
-}
-
-export async function saveUserProgress(name: string, surveyData: any, participantData: any, goals: any): Promise<boolean> {
+// Obtener perfil de usuario
+export const getUserProfile = async (projectId: string): Promise<UserProfile | null> => {
   try {
-    const user = getCurrentUser();
-    if (!user) return false;
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('project_id', projectId)
+      .single();
 
-    // Check if Supabase is configured
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-      // Fallback to localStorage if Supabase is not configured
-      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
-      const newProgress = {
-        id: Date.now().toString(),
-        user_id: user.username,
-        name: name,
-        survey_data: surveyData,
-        participant_data: participantData,
-        goals: goals,
-        created_at: new Date().toISOString()
-      };
-      localProgresses.push(newProgress);
-      localStorage.setItem(`savedProgresses_${user.username}`, JSON.stringify(localProgresses));
-      return true;
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching user profile:', error);
+      return null;
     }
 
+    return data;
+  } catch (error) {
+    console.error('Error connecting to Supabase:', error);
+    return null;
+  }
+};
+
+// Crear o actualizar perfil de usuario
+export const upsertUserProfile = async (profile: UserProfile): Promise<boolean> => {
+  try {
     const { error } = await supabase
-      .from('saved_progresses')
-      .insert({
-        user_id: user.username,
-        name: name,
-        survey_data: surveyData,
-        participant_data: participantData,
-        goals: goals
+      .from('user_profiles')
+      .upsert({
+        project_id: profile.project_id,
+        survey_data: profile.survey_data,
+        goals: profile.goals,
+        participants: profile.participants,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'project_id'
       });
 
     if (error) {
-      console.error('Supabase error:', error);
-      // Fallback to localStorage on Supabase error
-      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
-      const newProgress = {
-        id: Date.now().toString(),
-        user_id: user.username,
-        name: name,
-        survey_data: surveyData,
-        participant_data: participantData,
-        goals: goals,
-        created_at: new Date().toISOString()
-      };
-      localProgresses.push(newProgress);
-      localStorage.setItem(`savedProgresses_${user.username}`, JSON.stringify(localProgresses));
-      return true;
-    }
-
-    return !error;
-  } catch (error) {
-    console.error('Error saving progress:', error);
-    // Fallback to localStorage on any error
-    try {
-      const user = getCurrentUser();
-      if (!user) return false;
-      
-      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
-      const newProgress = {
-        id: Date.now().toString(),
-        user_id: user.username,
-        name: name,
-        survey_data: surveyData,
-        participant_data: participantData,
-        goals: goals,
-        created_at: new Date().toISOString()
-      };
-      localProgresses.push(newProgress);
-      localStorage.setItem(`savedProgresses_${user.username}`, JSON.stringify(localProgresses));
-      return true;
-    } catch (fallbackError) {
-      console.error('Fallback error:', fallbackError);
+      console.error('Error upserting user profile:', error);
       return false;
     }
+
+    return true;
+  } catch (error) {
+    console.error('Error connecting to Supabase:', error);
+    return false;
   }
-}
+};
 
-export async function loadUserProgresses(): Promise<any[]> {
+// Guardar progreso
+export const saveProgress = async (progress: SavedProgress): Promise<boolean> => {
   try {
-    const user = getCurrentUser();
-    if (!user) return [];
+    const { error } = await supabase
+      .from('saved_progresses')
+      .insert({
+        project_id: progress.project_id,
+        name: progress.name,
+        survey_data: progress.survey_data,
+        participants: progress.participants,
+        goals: progress.goals
+      });
 
-    // Check if Supabase is configured
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-      // Load from localStorage if Supabase is not configured
-      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
-      return localProgresses;
+    if (error) {
+      console.error('Error saving progress:', error);
+      return false;
     }
 
+    return true;
+  } catch (error) {
+    console.error('Error connecting to Supabase:', error);
+    return false;
+  }
+};
+
+// Obtener progresos guardados
+export const getSavedProgresses = async (projectId: string): Promise<SavedProgress[]> => {
+  try {
     const { data, error } = await supabase
       .from('saved_progresses')
       .select('*')
-      .eq('user_id', user.username)
+      .eq('project_id', projectId)
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Supabase error:', error);
-      // Fallback to localStorage on error
-      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
-      return localProgresses;
+      console.error('Error fetching saved progresses:', error);
+      return [];
     }
 
     return data || [];
   } catch (error) {
-    console.error('Error loading progresses:', error);
-    // Fallback to localStorage on any error
-    try {
-      const user = getCurrentUser();
-      if (!user) return [];
-      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
-      return localProgresses;
-    } catch (fallbackError) {
-      console.error('Fallback error:', fallbackError);
-      return [];
-    }
+    console.error('Error connecting to Supabase:', error);
+    return [];
   }
-}
+};
 
-export async function loadProgress(progressId: string): Promise<any | null> {
+// Cargar progreso
+export const loadProgress = async (progressId: string): Promise<SavedProgress | null> => {
   try {
-    const user = getCurrentUser();
-    if (!user) return null;
-
-    // Check if Supabase is configured
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-      // Load from localStorage if Supabase is not configured
-      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
-      return localProgresses.find((p: any) => p.id === progressId) || null;
-    }
-
     const { data, error } = await supabase
       .from('saved_progresses')
       .select('*')
@@ -179,24 +140,33 @@ export async function loadProgress(progressId: string): Promise<any | null> {
       .single();
 
     if (error) {
-      console.error('Supabase error:', error);
-      // Fallback to localStorage on error
-      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
-      return localProgresses.find((p: any) => p.id === progressId) || null;
+      console.error('Error loading progress:', error);
+      return null;
     }
 
     return data;
   } catch (error) {
-    console.error('Error loading progress:', error);
-    // Fallback to localStorage on any error
-    try {
-      const user = getCurrentUser();
-      if (!user) return null;
-      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
-      return localProgresses.find((p: any) => p.id === progressId) || null;
-    } catch (fallbackError) {
-      console.error('Fallback error:', fallbackError);
-      return null;
-    }
+    console.error('Error connecting to Supabase:', error);
+    return null;
   }
-}
+};
+
+// Eliminar progreso
+export const deleteProgress = async (progressId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('saved_progresses')
+      .delete()
+      .eq('id', progressId);
+
+    if (error) {
+      console.error('Error deleting progress:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error connecting to Supabase:', error);
+    return false;
+  }
+};
