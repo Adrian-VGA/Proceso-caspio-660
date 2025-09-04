@@ -7,7 +7,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export interface UserProfile {
   id?: string;
-  project_id: string;
+  project_number: string;
   survey_data: Record<string, number>;
   goals: Record<string, number>;
   participants: any[];
@@ -17,7 +17,7 @@ export interface UserProfile {
 
 export interface SavedProgress {
   id?: string;
-  project_id: string;
+  user_id: string;
   name: string;
   survey_data: Record<string, number>;
   participants: any[];
@@ -37,12 +37,12 @@ export const validateUser = (projectId: string, password: string): boolean => {
 };
 
 // Obtener perfil de usuario
-export const getUserProfile = async (projectId: string): Promise<UserProfile | null> => {
+export const getUserProfile = async (projectNumber: string): Promise<UserProfile | null> => {
   try {
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_number', projectNumber)
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -63,13 +63,13 @@ export const upsertUserProfile = async (profile: UserProfile): Promise<boolean> 
     const { error } = await supabase
       .from('user_profiles')
       .upsert({
-        project_id: profile.project_id,
+        project_number: profile.project_number,
         survey_data: profile.survey_data,
         goals: profile.goals,
         participants: profile.participants,
         updated_at: new Date().toISOString()
       }, {
-        onConflict: 'project_id'
+        onConflict: 'project_number'
       });
 
     if (error) {
@@ -90,7 +90,7 @@ export const saveProgress = async (progress: SavedProgress): Promise<boolean> =>
     const { error } = await supabase
       .from('saved_progresses')
       .insert({
-        project_id: progress.project_id,
+        user_id: progress.user_id,
         name: progress.name,
         survey_data: progress.survey_data,
         participants: progress.participants,
@@ -110,12 +110,12 @@ export const saveProgress = async (progress: SavedProgress): Promise<boolean> =>
 };
 
 // Obtener progresos guardados
-export const getSavedProgresses = async (projectId: string): Promise<SavedProgress[]> => {
+export const getSavedProgresses = async (userId: string): Promise<SavedProgress[]> => {
   try {
     const { data, error } = await supabase
       .from('saved_progresses')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
