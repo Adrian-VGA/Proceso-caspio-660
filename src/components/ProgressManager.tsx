@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save, FolderOpen, Trash2, Calendar, Users, Download, Upload } from 'lucide-react';
 import { SurveyData, ParticipantData, SavedProgress } from '../types/survey';
-import { saveUserProgress, getSavedProgresses, loadProgress } from '../services/userService';
+import { saveProgress, getSavedProgresses, loadProgress } from '../services/userService';
 
 interface ProgressManagerProps {
   surveyData: SurveyData;
@@ -55,12 +55,13 @@ function ProgressManager({
     }
 
     setIsLoading(true);
-    const success = await saveUserProgress(
-      progressName.trim(),
-      surveyData,
-      participantData,
-      goals
-    );
+    const success = await saveProgress({
+      project_id: currentUser?.projectNumber,
+      name: progressName.trim(),
+      survey_data: surveyData,
+      participants: participantData,
+      goals: goals
+    });
 
     if (success) {
       setShowSaveSuccess(true);
