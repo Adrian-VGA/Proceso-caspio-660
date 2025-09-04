@@ -46,11 +46,23 @@ function App() {
       
       if (userSurveyData) {
         setSurveyData(JSON.parse(userSurveyData));
+      } else {
+        // Reset to 0 if no data for this user
+        const emptyData = {
+          'G6-8': 0,
+          'G9-11': 0,
+          'G12-14': 0,
+          'G15-18': 0,
+          'G19+': 0,
+          'STAFF': 0
+        };
+        setSurveyData(emptyData);
       }
+      
       if (userGoals) {
         setGoals(JSON.parse(userGoals));
       } else {
-        // Si no hay metas guardadas, usar metas en 0 para nuevo perfil
+        // Si no hay metas guardadas para este usuario específico, usar metas en 0
         const defaultGoals = {
           'G6-8': 0,
           'G9-11': 0,
@@ -180,6 +192,42 @@ function App() {
     const userData = { username, projectNumber: username }; // El username ES el número de proyecto
     saveCurrentUser(username, username);
     setCurrentUser(userData);
+    
+    // Cargar datos específicos del usuario que se está logueando
+    const userSurveyData = localStorage.getItem(`surveyData_${username}`);
+    const userGoals = localStorage.getItem(`userGoals_${username}`);
+    
+    if (userSurveyData) {
+      setSurveyData(JSON.parse(userSurveyData));
+    } else {
+      // Reset to 0 if no data for this user
+      const emptyData = {
+        'G6-8': 0,
+        'G9-11': 0,
+        'G12-14': 0,
+        'G15-18': 0,
+        'G19+': 0,
+        'STAFF': 0
+      };
+      setSurveyData(emptyData);
+    }
+    
+    if (userGoals) {
+      setGoals(JSON.parse(userGoals));
+    } else {
+      // Si no hay metas guardadas para este usuario específico, usar metas en 0
+      const defaultGoals = {
+        'G6-8': 0,
+        'G9-11': 0,
+        'G12-14': 0,
+        'G15-18': 0,
+        'G19+': 0,
+        'STAFF': 0
+      };
+      setGoals(defaultGoals);
+      localStorage.setItem(`userGoals_${username}`, JSON.stringify(defaultGoals));
+    }
+    
     setIsAuthenticated(true);
   };
 
@@ -193,6 +241,23 @@ function App() {
 
   const handleLogout = () => {
     logout();
+    // Reset states to default when logging out
+    setSurveyData({
+      'G6-8': 0,
+      'G9-11': 0,
+      'G12-14': 0,
+      'G15-18': 0,
+      'G19+': 0,
+      'STAFF': 0
+    });
+    setGoals({
+      'G6-8': 0,
+      'G9-11': 0,
+      'G12-14': 0,
+      'G15-18': 0,
+      'G19+': 0,
+      'STAFF': 0
+    });
     setIsAuthenticated(false);
     setCurrentUser(null);
     setCurrentView('main');
