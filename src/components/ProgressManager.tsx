@@ -68,7 +68,7 @@ function ProgressManager({
       await loadSavedProgresses();
       setTimeout(() => setShowSaveSuccess(false), 2000);
     } else {
-      alert('Error al guardar el progreso. Verifica tu conexión a Supabase.');
+      alert('Error al guardar el progreso. Si Supabase no está conectado, se guardará localmente.');
     }
     setIsLoading(false);
   };

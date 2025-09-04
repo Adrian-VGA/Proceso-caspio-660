@@ -45,6 +45,24 @@ export async function saveUserProgress(name: string, surveyData: any, participan
     const user = getCurrentUser();
     if (!user) return false;
 
+    // Check if Supabase is configured
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      // Fallback to localStorage if Supabase is not configured
+      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
+      const newProgress = {
+        id: Date.now().toString(),
+        user_id: user.username,
+        name: name,
+        survey_data: surveyData,
+        participant_data: participantData,
+        goals: goals,
+        created_at: new Date().toISOString()
+      };
+      localProgresses.push(newProgress);
+      localStorage.setItem(`savedProgresses_${user.username}`, JSON.stringify(localProgresses));
+      return true;
+    }
+
     const { error } = await supabase
       .from('saved_progresses')
       .insert({
@@ -55,10 +73,49 @@ export async function saveUserProgress(name: string, surveyData: any, participan
         goals: goals
       });
 
+    if (error) {
+      console.error('Supabase error:', error);
+      // Fallback to localStorage on Supabase error
+      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
+      const newProgress = {
+        id: Date.now().toString(),
+        user_id: user.username,
+        name: name,
+        survey_data: surveyData,
+        participant_data: participantData,
+        goals: goals,
+        created_at: new Date().toISOString()
+      };
+      localProgresses.push(newProgress);
+      localStorage.setItem(`savedProgresses_${user.username}`, JSON.stringify(localProgresses));
+      return true;
+    }
+
     return !error;
   } catch (error) {
     console.error('Error saving progress:', error);
-    return false;
+    // Fallback to localStorage on any error
+    try {
+      const user = getCurrentUser();
+      if (!user) return false;
+      
+      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
+      const newProgress = {
+        id: Date.now().toString(),
+        user_id: user.username,
+        name: name,
+        survey_data: surveyData,
+        participant_data: participantData,
+        goals: goals,
+        created_at: new Date().toISOString()
+      };
+      localProgresses.push(newProgress);
+      localStorage.setItem(`savedProgresses_${user.username}`, JSON.stringify(localProgresses));
+      return true;
+    } catch (fallbackError) {
+      console.error('Fallback error:', fallbackError);
+      return false;
+    }
   }
 }
 
@@ -67,30 +124,79 @@ export async function loadUserProgresses(): Promise<any[]> {
     const user = getCurrentUser();
     if (!user) return [];
 
+    // Check if Supabase is configured
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      // Load from localStorage if Supabase is not configured
+      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
+      return localProgresses;
+    }
+
     const { data, error } = await supabase
       .from('saved_progresses')
       .select('*')
       .eq('user_id', user.username)
       .order('created_at', { ascending: false });
 
-    return error ? [] : data;
+    if (error) {
+      console.error('Supabase error:', error);
+      // Fallback to localStorage on error
+      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
+      return localProgresses;
+    }
+
+    return data || [];
   } catch (error) {
     console.error('Error loading progresses:', error);
-    return [];
+    // Fallback to localStorage on any error
+    try {
+      const user = getCurrentUser();
+      if (!user) return [];
+      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
+      return localProgresses;
+    } catch (fallbackError) {
+      console.error('Fallback error:', fallbackError);
+      return [];
+    }
   }
 }
 
 export async function loadProgress(progressId: string): Promise<any | null> {
   try {
+    const user = getCurrentUser();
+    if (!user) return null;
+
+    // Check if Supabase is configured
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      // Load from localStorage if Supabase is not configured
+      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
+      return localProgresses.find((p: any) => p.id === progressId) || null;
+    }
+
     const { data, error } = await supabase
       .from('saved_progresses')
       .select('*')
       .eq('id', progressId)
       .single();
 
-    return error ? null : data;
+    if (error) {
+      console.error('Supabase error:', error);
+      // Fallback to localStorage on error
+      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
+      return localProgresses.find((p: any) => p.id === progressId) || null;
+    }
+
+    return data;
   } catch (error) {
     console.error('Error loading progress:', error);
-    return null;
+    // Fallback to localStorage on any error
+    try {
+      const user = getCurrentUser();
+      if (!user) return null;
+      const localProgresses = JSON.parse(localStorage.getItem(`savedProgresses_${user.username}`) || '[]');
+      return localProgresses.find((p: any) => p.id === progressId) || null;
+    } catch (fallbackError) {
+      console.error('Fallback error:', fallbackError);
+      return null;
+    }
   }
 }
