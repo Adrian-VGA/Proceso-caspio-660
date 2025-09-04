@@ -183,7 +183,9 @@ function RemoteAdmin({ surveyData, setSurveyData, goals, currentUser, onBack }: 
 
       {/* Groups Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
-        {groupConfigs.map((config) => {
+        {groupConfigs
+          .filter(config => goals[config.key as keyof SurveyData] > 0)
+          .map((config) => {
           const current = tempData[config.key as keyof SurveyData];
           const goal = goals[config.key as keyof SurveyData];
           const remaining = goal - current;

@@ -71,7 +71,9 @@ function MobileRemoteControl({ sessionId, projectNumber, surveyData, setSurveyDa
 
       {/* Groups */}
       <div className="space-y-4 mb-6">
-        {groupConfigs.map((config) => {
+        {groupConfigs
+          .filter(config => goals[config.key as keyof SurveyData] > 0)
+          .map((config) => {
           const current = surveyData[config.key as keyof SurveyData];
           const goal = goals[config.key as keyof SurveyData];
           const remaining = goal - current;

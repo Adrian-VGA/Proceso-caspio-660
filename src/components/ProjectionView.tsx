@@ -147,7 +147,9 @@ function ProjectionView({ surveyData, goals, currentUser, onBack, isStandalone =
 
       {/* Charts Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        {chartConfigs.map((config) => (
+        {chartConfigs
+          .filter(config => localGoals[config.key as keyof SurveyData] > 0)
+          .map((config) => (
           <ProgressChart
             key={config.key}
             title={config.title}
@@ -158,15 +160,17 @@ function ProjectionView({ surveyData, goals, currentUser, onBack, isStandalone =
           />
         ))}
 
-        {/* Total L1/L2 Y SM Chart */}
-        <ProgressChart
-          title="Total RESULTADOS L1/L2 Y SM"
-          current={totalL2SM}
-          goal={totalL2SMGoal}
-          color="#e74c3c"
-          surveyType="Total (Excluye Staff)"
-          isTotal={true}
-        />
+        {/* Total L1/L2 Y SM Chart - Solo mostrar si hay grupos activos */}
+        {totalL2SMGoal > 0 && (
+          <ProgressChart
+            title="Total RESULTADOS L1/L2 Y SM"
+            current={totalL2SM}
+            goal={totalL2SMGoal}
+            color="#e74c3c"
+            surveyType="Total (Excluye Staff)"
+            isTotal={true}
+          />
+        )}
       </div>
 
       {/* Footer */}
