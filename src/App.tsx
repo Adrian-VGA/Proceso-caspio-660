@@ -92,7 +92,9 @@ function App() {
       const project = urlParams.get('project');
       if (sessionId && project) {
         setCurrentView('remote');
-        setCurrentUser({ username: project, projectNumber: project, isAuthenticated: true });
+        setCurrentUser({ username: project, projectNumber: project });
+        setIsAuthenticated(true);
+        
         // Load data for remote session
         const savedData = localStorage.getItem(`surveyData_${project}`);
         const savedGoals = localStorage.getItem(`userGoals_${project}`);
@@ -101,6 +103,17 @@ function App() {
         }
         if (savedGoals) {
           setGoals(JSON.parse(savedGoals));
+        } else {
+          // Si no hay metas guardadas, usar las por defecto
+          const defaultGoals = {
+            'G6-8': 30,
+            'G9-11': 46,
+            'G12-14': 41,
+            'G15-18': 46,
+            'G19+': 44,
+            'STAFF': 14
+          };
+          setGoals(defaultGoals);
         }
       }
     }

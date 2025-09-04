@@ -12,6 +12,59 @@ interface MobileRemoteControlProps {
 
 function MobileRemoteControl({ sessionId, projectNumber, surveyData, setSurveyData, goals }: MobileRemoteControlProps) {
   const [isConnected, setIsConnected] = useState(true);
+  const [localSurveyData, setLocalSurveyData] = useState<SurveyData>(surveyData);
+  const [localGoals, setLocalGoals] = useState<SurveyData>(goals);
+
+  // Cargar datos al inicializar el componente
+  useEffect(() => {
+    const loadRemoteData = () => {
+      // Cargar datos guardados del proyecto
+      const savedData = localStorage.getItem(`surveyData_${projectNumber}`);
+      const savedGoals = localStorage.getItem(`userGoals_${projectNumber}`);
+      
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        setLocalSurveyData(parsedData);
+        setSurveyData(parsedData);
+      }
+      
+      if (savedGoals) {
+        const parsedGoals = JSON.parse(savedGoals);
+        setLocalGoals(parsedGoals);
+      } else {
+        // Usar metas por defecto si no hay guardadas
+        const defaultGoals = {
+          'G6-8': 30,
+          'G9-11': 46,
+          'G12-14': 41,
+          'G15-18': 46,
+          'G19+': 44,
+          'STAFF': 14
+        };
+        setLocalGoals(defaultGoals);
+      }
+    };
+
+    loadRemoteData();
+  }, [projectNumber, setSurveyData]);
+
+  // Escuchar cambios en tiempo real
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === `surveyData_${projectNumber}` && e.newValue) {
+        const newData = JSON.parse(e.newValue);
+        setLocalSurveyData(newData);
+        setSurveyData(newData);
+      }
+      if (e.key === `userGoals_${projectNumber}` && e.newValue) {
+        const newGoals = JSON.parse(e.newValue);
+        setLocalGoals(newGoals);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [projectNumber, setSurveyData]);
 
   const groupConfigs = [
     { key: 'G6-8', title: 'G6-8', color: '#ff69b4', surveyType: 'L1 (15 min)' },
@@ -24,14 +77,18 @@ function MobileRemoteControl({ sessionId, projectNumber, surveyData, setSurveyDa
 
   const updateCount = (key: keyof SurveyData, increment: boolean) => {
     const newData = {
-      ...surveyData,
+      ...localSurveyData,
       [key]: increment 
-        ? Math.min(surveyData[key] + 1, goals[key])
-        : Math.max(surveyData[key] - 1, 0)
+        ? Math.min(localSurveyData[key] + 1, localGoals[key])
+        : Math.max(localSurveyData[key] - 1, 0)
     };
+    setLocalSurveyData(newData);
     setSurveyData(newData);
     
-    // Sincronizar con la aplicación principal
+    // Guardar en localStorage para sincronización
+    localStorage.setItem(`surveyData_${projectNumber}`, JSON.stringify(newData));
+    
+    // Sincronizar con la aplicación principal usando eventos
     try {
       localStorage.setItem(`caspio-remote-${sessionId}-${projectNumber}`, JSON.stringify({ surveyData: newData }));
       window.dispatchEvent(new StorageEvent('storage', {
@@ -72,10 +129,10 @@ function MobileRemoteControl({ sessionId, projectNumber, surveyData, setSurveyDa
       {/* Groups */}
       <div className="space-y-4 mb-6">
         {groupConfigs
-          .filter(config => goals[config.key as keyof SurveyData] > 0)
+          .filter(config => localGoals[config.key as keyof SurveyData] > 0)
           .map((config) => {
-          const current = surveyData[config.key as keyof SurveyData];
-          const goal = goals[config.key as keyof SurveyData];
+          const current = localSurveyData[config.key as keyof SurveyData];
+          const goal = localGoals[config.key as keyof SurveyData];
           const remaining = goal - current;
 
           return (
