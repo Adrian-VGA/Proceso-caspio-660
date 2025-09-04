@@ -77,7 +77,7 @@ function GoalsConfiguration({ goals, setGoals, currentUser, onBack }: GoalsConfi
   };
 
   const setDefaultGoals = () => {
-    const defaultGoals: SurveyData = {
+    const suggestedGoals: SurveyData = {
       'G6-8': 30,
       'G9-11': 46,
       'G12-14': 41,
@@ -85,7 +85,7 @@ function GoalsConfiguration({ goals, setGoals, currentUser, onBack }: GoalsConfi
       'G19+': 44,
       'STAFF': 14
     };
-    setTempGoals(defaultGoals);
+    setTempGoals(suggestedGoals);
   };
 
   const totalGoal = Object.values(tempGoals).reduce((a, b) => a + b, 0);
@@ -114,7 +114,7 @@ function GoalsConfiguration({ goals, setGoals, currentUser, onBack }: GoalsConfi
               className="flex items-center gap-2 px-4 py-2 bg-blue-500/30 text-white rounded-lg hover:bg-blue-500/40 transition-all duration-300"
             >
               <RotateCcw size={20} />
-              Valores Por Defecto
+              Valores Sugeridos
             </button>
             <button
               onClick={resetGoals}

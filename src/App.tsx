@@ -25,12 +25,12 @@ function App() {
   });
 
   const [goals, setGoals] = useState<SurveyData>({
-    'G6-8': 30,
-    'G9-11': 46,
-    'G12-14': 41,
-    'G15-18': 46,
-    'G19+': 44,
-    'STAFF': 14
+    'G6-8': 0,
+    'G9-11': 0,
+    'G12-14': 0,
+    'G15-18': 0,
+    'G19+': 0,
+    'STAFF': 0
   });
 
   // Load user session and data on mount
@@ -43,13 +43,24 @@ function App() {
       // Load user-specific data
       const userSurveyData = localStorage.getItem(`surveyData_${user.username}`);
       const userGoals = localStorage.getItem(`userGoals_${user.username}`);
-      const userParticipantData = localStorage.getItem(`participantData_${user.username}`);
       
       if (userSurveyData) {
         setSurveyData(JSON.parse(userSurveyData));
       }
       if (userGoals) {
         setGoals(JSON.parse(userGoals));
+      } else {
+        // Si no hay metas guardadas, usar metas en 0 para nuevo perfil
+        const defaultGoals = {
+          'G6-8': 0,
+          'G9-11': 0,
+          'G12-14': 0,
+          'G15-18': 0,
+          'G19+': 0,
+          'STAFF': 0
+        };
+        setGoals(defaultGoals);
+        localStorage.setItem(`userGoals_${user.username}`, JSON.stringify(defaultGoals));
       }
     }
   }, []);
@@ -104,16 +115,17 @@ function App() {
         if (savedGoals) {
           setGoals(JSON.parse(savedGoals));
         } else {
-          // Si no hay metas guardadas, usar las por defecto
+          // Si no hay metas guardadas, usar metas en 0 para nuevo perfil
           const defaultGoals = {
-            'G6-8': 30,
-            'G9-11': 46,
-            'G12-14': 41,
-            'G15-18': 46,
-            'G19+': 44,
-            'STAFF': 14
+            'G6-8': 0,
+            'G9-11': 0,
+            'G12-14': 0,
+            'G15-18': 0,
+            'G19+': 0,
+            'STAFF': 0
           };
           setGoals(defaultGoals);
+          localStorage.setItem(`userGoals_${project}`, JSON.stringify(defaultGoals));
         }
       }
     }

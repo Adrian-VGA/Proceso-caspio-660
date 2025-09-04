@@ -32,16 +32,17 @@ function MobileRemoteControl({ sessionId, projectNumber, surveyData, setSurveyDa
         const parsedGoals = JSON.parse(savedGoals);
         setLocalGoals(parsedGoals);
       } else {
-        // Usar metas por defecto si no hay guardadas
+        // Usar metas en 0 si no hay guardadas (nuevo perfil)
         const defaultGoals = {
-          'G6-8': 30,
-          'G9-11': 46,
-          'G12-14': 41,
-          'G15-18': 46,
-          'G19+': 44,
-          'STAFF': 14
+          'G6-8': 0,
+          'G9-11': 0,
+          'G12-14': 0,
+          'G15-18': 0,
+          'G19+': 0,
+          'STAFF': 0
         };
         setLocalGoals(defaultGoals);
+        localStorage.setItem(`userGoals_${projectNumber}`, JSON.stringify(defaultGoals));
       }
     };
 
